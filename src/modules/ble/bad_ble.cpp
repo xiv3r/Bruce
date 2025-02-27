@@ -6,7 +6,9 @@
 #include "bad_ble.h"
 
 #define DEF_DELAY 100
-BleKeyboard Kble(String("Keyboard_" + String((uint8_t)(ESP.getEfuseMac() >> 32), HEX)).c_str(), "BruceNet", 98);
+
+BleKeyboard Kble = BleKeyboard("BruceNet", "BruceNet", 98); // deviceName will be changed using setName()
+
 uint8_t Ask_for_restart=0;
 /* Example of payload file
 
@@ -46,14 +48,13 @@ void key_input_ble(FS fs, String bad_script) {
       char ArgChar;
       bool ArgIsCmd;  // Verifies if the Argument is DELETE, TAB or F1-F12
       int cmdFail;    // Verifies if the command is supported, mus pass through 2 if else statemens and summ 2 to not be supported
-      int line;       // Shows 3 commands of the payload on screen to follow the execution
+                      // Shows 3 commands of the payload on screen to follow the execution
 
 
       Kble.releaseAll();
       tft.setTextSize(1);
       tft.setCursor(0, 0);
       tft.fillScreen(bruceConfig.bgColor);
-      line = 0;
 
       while (payloadFile.available()) {
         if(check(SelPress)) {
@@ -235,6 +236,9 @@ bool ask_restart() {
 
 void ble_setup() {
   if(ask_restart()) return;
+
+  Kble.setName(bruceConfig.bleName.c_str());
+
   FS *fs;
   Serial.println("BadBLE begin");
   bool first_time=true;
@@ -271,6 +275,7 @@ NewScript:
         {"da-DK",       [=]() { chooseKb_ble(KeyboardLayout_da_DK); }},
         {"hu-HU",       [=]() { chooseKb_ble(KeyboardLayout_hu_HU); }},
         {"tr-TR",       [=]() { chooseKb_ble(KeyboardLayout_tr_TR); }},
+        {"pl-PL",       [=]() { chooseKb_ble(KeyboardLayout_en_US); }},
         {"Main Menu",   [=]() { returnToMenu=true; }},
       };
       index=loopOptions(options,false,true,"Keyboard Layout",index); // It will ask for the keyboard each time, but will save the last chosen to be faster
@@ -299,7 +304,6 @@ NewScript:
     else displayWarning("Canceled", true);
   }
 End:
-
   returnToMenu=true;
 }
 
@@ -308,6 +312,8 @@ End:
 void ble_MediaCommands() {
   if(ask_restart()) return;
   Ask_for_restart=1; // arm the flag
+  
+  Kble.setName(bruceConfig.bleName.c_str());
 
   if(!Kble.isConnected()) Kble.begin();
 
@@ -337,7 +343,6 @@ void ble_MediaCommands() {
     if(!returnToMenu) goto reMenu;
   }
   returnToMenu=true;
-
 }
 
 #if defined(HAS_KEYBOARD)
@@ -345,6 +350,8 @@ void ble_MediaCommands() {
 
 void ble_keyboard() {
   if(ask_restart()) return;
+
+  Kble.setName(bruceConfig.bleName.c_str());
 
   drawMainBorder();
   options = {
@@ -360,6 +367,7 @@ void ble_keyboard() {
     {"da-DK",       [=]() { chooseKb_ble(KeyboardLayout_da_DK); }},
     {"hu-HU",       [=]() { chooseKb_ble(KeyboardLayout_hu_HU); }},
     {"tr-TR",       [=]() { chooseKb_ble(KeyboardLayout_tr_TR); }},
+    {"pl-PL",       [=]() { chooseKb_ble(KeyboardLayout_en_US); }},
     {"Main Menu",   [=]() { returnToMenu = true; }},
   };
   loopOptions(options,false,true,"Keyboard Layout");

@@ -20,20 +20,23 @@ JsonDocument BruceConfig::toJson() const {
     setting["ledBright"] = ledBright;
     setting["ledColor"] = String(ledColor, HEX);
 
-    JsonObject _webUI = setting.createNestedObject("webUI");
+    JsonObject _webUI = setting["webUI"].to<JsonObject>();
     _webUI["user"] = webUI.user;
     _webUI["pwd"] = webUI.pwd;
 
-    JsonObject _wifiAp = setting.createNestedObject("wifiAp");
+    JsonObject _wifiAp = setting["wifiAp"].to<JsonObject>();
     _wifiAp["ssid"] = wifiAp.ssid;
     _wifiAp["pwd"] = wifiAp.pwd;
 
-    JsonObject _wifi = setting.createNestedObject("wifi");
+    setting["bleName"] = bleName;
+
+    JsonObject _wifi = setting["wifi"].to<JsonObject>();
     for (const auto& pair : wifi) {
         _wifi[pair.first] = pair.second;
     }
 
     setting["irTx"] = irTx;
+    setting["irTxRepeats"] = irTxRepeats;
     setting["irRx"] = irRx;
 
     setting["rfTx"] = rfTx;
@@ -45,7 +48,7 @@ JsonDocument BruceConfig::toJson() const {
 
     setting["rfidModule"] = rfidModule;
 
-    JsonArray _mifareKeys = setting.createNestedArray("mifareKeys");
+    JsonArray _mifareKeys = setting["mifareKeys"].to<JsonArray>();
     for (auto key : mifareKeys) _mifareKeys.add(key);
 
     setting["gpsBaudrate"] = gpsBaudrate;
@@ -53,15 +56,16 @@ JsonDocument BruceConfig::toJson() const {
     setting["startupApp"] = startupApp;
     setting["wigleBasicToken"] = wigleBasicToken;
     setting["devMode"] = devMode;
+    setting["colorInverted"] = colorInverted;
 
-    JsonArray dm = setting.createNestedArray("disabledMenus");
+    JsonArray dm = setting["disabledMenus"].to<JsonArray>();
     for(int i=0; i < disabledMenus.size(); i++){
         dm.add(disabledMenus[i]);
     }
 
-    JsonArray qrArray = setting.createNestedArray("qrCodes");
+    JsonArray qrArray = setting["qrCodes"].to<JsonArray>();
     for (const auto& entry : qrCodes) {
-        JsonObject qrEntry = qrArray.createNestedObject();
+        JsonObject qrEntry = qrArray.add<JsonObject>();
         qrEntry["menuName"] = entry.menuName;
         qrEntry["content"] = entry.content;
     }
@@ -126,7 +130,10 @@ void BruceConfig::fromFile() {
             wifi[kv.key().c_str()] = kv.value().as<String>();
     } else { count++; log_e("Fail"); }
 
+    if(!setting["bleName"].isNull())  { bleName  = setting["bleName"].as<String>(); } else { count++; log_e("Fail"); }
+
     if(!setting["irTx"].isNull())        { irTx        = setting["irTx"].as<int>(); } else { count++; log_e("Fail"); }
+    if(!setting["irTxRepeats"].isNull()) { irTxRepeats = setting["irTxRepeats"].as<uint8_t>(); } else { count++; log_e("Fail"); }
     if(!setting["irRx"].isNull())        { irRx        = setting["irRx"].as<int>(); } else { count++; log_e("Fail"); }
 
     if(!setting["rfTx"].isNull())        { rfTx        = setting["rfTx"].as<int>(); } else { count++; log_e("Fail"); }
@@ -148,6 +155,7 @@ void BruceConfig::fromFile() {
     if(!setting["startupApp"].isNull())      { startupApp  = setting["startupApp"].as<String>(); } else { count++; log_e("Fail"); }
     if(!setting["wigleBasicToken"].isNull()) { wigleBasicToken  = setting["wigleBasicToken"].as<String>(); } else { count++; log_e("Fail"); }
     if(!setting["devMode"].isNull())         { devMode  = setting["devMode"].as<int>(); } else { count++; log_e("Fail"); }
+    if(!setting["colorInverted"].isNull())   { colorInverted  = setting["colorInverted"].as<int>(); } else { count++; log_e("Fail"); }
 
     if(!setting["disabledMenus"].isNull()) {
         disabledMenus.clear();
@@ -216,18 +224,19 @@ void BruceConfig::validateConfig() {
     validateMifareKeysItems();
     validateGpsBaudrateValue();
     validateDevModeValue();
+    validateColorInverted();
 }
 
 
-void BruceConfig::setTheme(uint16_t primary, uint16_t secondary, uint16_t background) {
+void BruceConfig::setTheme(uint16_t primary, uint16_t* secondary, uint16_t* background) {
     priColor = primary;
-    secColor = secondary == NULL ? primary - 0x2000 : secondary;
-    bgColor = background == NULL ? 0x0 : background;
+    secColor = secondary == nullptr ? primary - 0x2000 : *secondary;
+    bgColor = background == nullptr ? 0x0 : *background;
     validateTheme();
     saveFile();
 }
 
-
+// uint16_t can't be lower than 0 or greater than 0xFFFF, thats its limit
 void BruceConfig::validateTheme() {
     if (priColor < 0 || priColor > 0xFFFF) priColor = DEFAULT_PRICOLOR;
     if (secColor < 0 || secColor > 0xFFFF) secColor = priColor - 0x2000;
@@ -359,8 +368,20 @@ String BruceConfig::getWifiPassword(const String& ssid) const {
 }
 
 
+void BruceConfig::setBleName(String value) {
+    bleName = value;
+    saveFile();
+}
+
+
 void BruceConfig::setIrTxPin(int value) {
     irTx = value;
+    saveFile();
+}
+
+
+void BruceConfig::setIrTxRepeats(uint8_t value) {
+    irTxRepeats = value;
     saveFile();
 }
 
@@ -399,7 +420,7 @@ void BruceConfig::validateRfModuleValue() {
 
 void BruceConfig::setRfFreq(float value, int fxdFreq) {
     rfFreq = value;
-    if (fxdFreq != NULL) rfFxdFreq = fxdFreq;
+    if (fxdFreq >1) rfFxdFreq = fxdFreq;
     saveFile();
 }
 
@@ -492,6 +513,15 @@ void BruceConfig::validateDevModeValue() {
     if (devMode > 1) devMode = 1;
 }
 
+void BruceConfig::setColorInverted(int value) {
+    colorInverted = value;
+    validateColorInverted();
+    saveFile();
+}
+
+void BruceConfig::validateColorInverted() {
+    if (colorInverted > 1) colorInverted = 1;
+}
 
 void BruceConfig::addDisabledMenu(String value) {
     // TODO: check if duplicate

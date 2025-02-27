@@ -33,6 +33,8 @@ void runClockLoop();
 
 int gsetIrTxPin(bool set = false);
 
+void setIrTxRepeats();
+
 int gsetIrRxPin(bool set = false);
 
 int gsetRfTxPin(bool set = false);
@@ -48,5 +50,7 @@ void setWifiStartupConfig();
 void setStartupApp();
 
 void setGpsBaudrateMenu();
+
+void setNetworkCredsMenu();
 
 #endif

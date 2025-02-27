@@ -89,16 +89,16 @@ void turnOffDisplay() {
 
 bool wakeUpScreen(){
   previousMillis = millis();
-  if(isScreenOff){
+  if (isScreenOff) {
     isScreenOff = false;
     dimmer = false;
     getBrightness();
-    delay(200);
+    vTaskDelay(pdMS_TO_TICKS(200));
     return true;
-  }else if(dimmer){
+  } else if(dimmer) {
     dimmer = false;
     getBrightness();
-    delay(200);
+    vTaskDelay(pdMS_TO_TICKS(200));
     return true;
   }
   return false;
@@ -274,9 +274,9 @@ void padprintln(const String &s, int16_t padx) {
   }
 }
 void padprintln(const char str[], int16_t padx) {
-  if (str == "") {
-  tft.setCursor(padx * BORDER_PAD_X, tft.getCursorY());
-  tft.println(str);
+  if (strcmp(str, "") == 0) {
+    tft.setCursor(padx * BORDER_PAD_X, tft.getCursorY());
+    tft.println(str);
     return;
   }
 
@@ -561,12 +561,16 @@ void drawMainBorder(bool clear) {
     // if(wifiConnected) {tft.print(timeStr);} else {tft.print("BRUCE 1.0b");}
 
     int i=0;
-    drawBatteryStatus();
-    if(sdcardMounted) { tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor); tft.setTextSize(FP); tft.drawString("SD", tftWidth - (85 + 20*i),12); i++; } // Indication for SD card on screen
-    if(gpsConnected) { drawGpsSmall(tftWidth - (85 + 20*i), 7); i++; }
-    if(wifiConnected) { drawWifiSmall(tftWidth - (85 + 20*i), 7); i++;}               //Draw Wifi Symbol beside battery
-    if(BLEConnected) { drawBLESmall(tftWidth - (85 + 20*i), 7); i++; }       //Draw BLE beside Wifi
-    if(isConnectedWireguard) { drawWireguardStatus(tftWidth - (85 + 21*i), 7); i++; }//Draw Wg bedide BLE, if the others exist, if not, beside battery
+    uint8_t bat = getBattery();
+    uint8_t bat_margin = 85;
+    if(bat>0) {
+      drawBatteryStatus(bat);
+    } else bat_margin = 20;
+    if(sdcardMounted) { tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor); tft.setTextSize(FP); tft.drawString("SD", tftWidth - (bat_margin + 20*i),12); i++; } // Indication for SD card on screen
+    if(gpsConnected) { drawGpsSmall(tftWidth - (bat_margin + 20*i), 7); i++; }
+    if(wifiConnected) { drawWifiSmall(tftWidth - (bat_margin + 20*i), 7); i++;}               //Draw Wifi Symbol beside battery
+    if(BLEConnected) { drawBLESmall(tftWidth - (bat_margin + 20*i), 7); i++; }       //Draw BLE beside Wifi
+    if(isConnectedWireguard) { drawWireguardStatus(tftWidth - (bat_margin + 21*i), 7); i++; }//Draw Wg bedide BLE, if the others exist, if not, beside battery
 
 
     tft.drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, bruceConfig.priColor);
@@ -645,9 +649,9 @@ int getBattery() {
 ** Function name: drawBatteryStatus()
 ** Description:   Delivers the battery value from 1-100
 ***************************************************************************************/
-void drawBatteryStatus() {
+void drawBatteryStatus(uint8_t bat) {
+    if(bat==0) return;
     tft.drawRoundRect(tftWidth - 42, 7, 34, 17, 2, bruceConfig.priColor);
-    int bat = getBattery();
     tft.setTextSize(FP);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     tft.drawRightString((bat==100 ? "" : " ")  + String(bat) + "%", tftWidth - 45, 12, 1);
@@ -681,7 +685,6 @@ void drawWireguardStatus(int x, int y) {
 Opt_Coord listFiles(int index, std::vector<FileList> fileList) {
     Opt_Coord coord;
     if(index==0){
-      tft.fillScreen(bruceConfig.bgColor);
       tft.fillScreen(bruceConfig.bgColor);
     }
     tft.setCursor(10,10);
@@ -960,6 +963,7 @@ void *Gif::openFile(const char *fname, int32_t *pSize) {
     *pSize = FSGifFile->size();
     return (void *)FSGifFile;
   }
+  return NULL;
 }
 
 void Gif::closeFile(void *pHandle) {

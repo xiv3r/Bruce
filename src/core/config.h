@@ -40,9 +40,9 @@ public:
     const char *filepath = "/bruce.conf";
 
     // Theme colors in RGB565 format
-    uint16_t priColor = DEFAULT_PRICOLOR;
-    uint16_t secColor = DEFAULT_PRICOLOR-0x2000;
-    uint16_t bgColor  = 0x0000;
+    int32_t priColor = DEFAULT_PRICOLOR;
+    int32_t secColor = DEFAULT_PRICOLOR-0x2000;
+    int32_t bgColor  = 0x0000;
 
     // Settings
     int rotation = ROTATION > 1 ? 3 : 1;
@@ -60,9 +60,13 @@ public:
     Credential webUI = {"admin", "bruce"};
     WiFiCredential wifiAp = {"BruceNet", "brucenet"};
     std::map<String, String> wifi = {};
+    
+    // BLE 
+    String bleName = String("Keyboard_" + String((uint8_t)(ESP.getEfuseMac() >> 32), HEX));
 
     // IR
     int irTx = LED;
+    uint8_t irTxRepeats = 0;
     int irRx = GROVE_SCL;
 
     // RF
@@ -84,6 +88,7 @@ public:
     String startupApp = "";
     String wigleBasicToken = "";
     int devMode = 0;
+    int colorInverted = 1;
 
     std::vector<String> disabledMenus = {};
 
@@ -109,7 +114,7 @@ public:
     JsonDocument toJson() const;
 
     // Theme
-    void setTheme(uint16_t primary, uint16_t secondary = NULL, uint16_t background = NULL);
+    void setTheme(uint16_t primary, uint16_t* secondary = nullptr, uint16_t* background = nullptr);
     void validateTheme();
 
     // Settings
@@ -140,8 +145,12 @@ public:
     void removeQrCodeEntry(const String& menuName);
     String getWifiPassword(const String& ssid) const;
 
+    // BLE
+    void setBleName(const String name);
+
     // IR
     void setIrTxPin(int value);
+    void setIrTxRepeats(uint8_t value);
     void setIrRxPin(int value);
 
     // RF
@@ -149,7 +158,7 @@ public:
     void setRfRxPin(int value);
     void setRfModule(RFModules value);
     void validateRfModuleValue();
-    void setRfFreq(float value, int fxdFreq = NULL);
+    void setRfFreq(float value, int fxdFreq = 2);
     void setRfFxdFreq(float value);
     void setRfScanRange(int value, int fxdFreq = 0);
     void validateRfScanRangeValue();
@@ -169,6 +178,8 @@ public:
     void setWigleBasicToken(String value);
     void setDevMode(int value);
     void validateDevModeValue();
+    void setColorInverted(int value);
+    void validateColorInverted();
     void addDisabledMenu(String value);
     // TODO: removeDisabledMenu(String value);
 };
